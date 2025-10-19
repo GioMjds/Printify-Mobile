@@ -1,0 +1,71 @@
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  customer
+  admin
+  staff // Working alongside admin, but has limited permissions
+}
+
+enum UploadStatus {
+  pending // Default status for new document uploads (customer-side)
+  cancelled // Customer can cancel the upload at any time
+  rejected // Admin can reject the upload if it doesn't meet requirements w/ specific reason
+  ready_to_pickup // Admin can set this when the document is ready for pickup
+  completed // Final status when the document has been picked up by the customer
+} 
+
+model User {
+  id                String        @id 
+  email             String        @unique
+  password          String
+  profile_image     String?
+  name              String?
+  role              UserRole      @default(customer)
+  isVerified        Boolean?      @default(false)
+  uploads           Upload[]      @relation("UserUploads")
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+}
+
+model Upload {
+  id                String        @id @default(uuid())
+  filename          String
+  fileData          String
+  status            UploadStatus  @default(pending)
+  cancel_reason     String?
+  rejection_reason  String?
+  needed_amount     Int?
+  customer          User          @relation("UserUploads", fields: [customerId], references: [id])
+  customerId        String
+  format            String
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  notifications     Notification[]
+}
+
+model Notification {
+  id                String        @id @default(uuid())
+  upload            Upload        @relation(fields: [uploadId], references: [id])
+  uploadId          String
+  sentAt            DateTime      @default(now())
+  message           String
+  markAsRead        Boolean?      @default(false)
+}
+
+model Expense {
+  id                Int           @id @default(autoincrement())
+  expenseName       String
+  amount            Decimal
+  category          String
+  description       String?
+  occuredAt         DateTime
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+}
