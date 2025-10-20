@@ -25,7 +25,7 @@ export class ApiClient {
     private baseUrl: string;
 
     constructor(config: AxiosRequestConfig = {}) {
-        this.baseUrl = `${process.env.EXPO_PUBLIC_NEST_URL}`;
+        this.baseUrl = `${process.env.EXPO_PUBLIC_NESTJS_URL}/api`;
 
         this.axiosInstance = axios.create({
             baseURL: this.baseUrl,
