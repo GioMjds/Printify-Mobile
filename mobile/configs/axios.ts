@@ -4,7 +4,6 @@ import axios, {
     type AxiosRequestConfig,
     type AxiosResponse,
 } from 'axios';
-import * as SecureStore from 'expo-secure-store';
 
 export interface ApiResponse<T = any> {
     data?: T;
@@ -43,34 +42,6 @@ export class ApiClient {
         this.axiosInstance.interceptors.request.use(
             async (config) => {
                 config.withCredentials = true;
-                
-                // Don't add auth header for public endpoints
-                const publicEndpoints = [
-                    '/api/auth/login',
-                    '/api/auth/register',
-                    '/api/auth/verify',
-                    '/api/auth/resend_otp',
-                    '/api/auth/forgot_password',
-                    '/api/auth/verify_reset_otp',
-                    '/api/auth/reset_password',
-                    '/api/auth/google-auth',
-                ];
-                
-                const isPublicEndpoint = publicEndpoints.some(endpoint => 
-                    config.url?.includes(endpoint)
-                );
-                
-                if (!isPublicEndpoint) {
-                    try {
-                        const accessToken = await SecureStore.getItemAsync('access_token');
-                        if (accessToken) {
-                            config.headers.Authorization = `Bearer ${accessToken}`;
-                        }
-                    } catch (error) {
-                        console.error(`❌ Error retrieving access token: ${error}`);
-                    }
-                }
-                
                 return config;
             },
             (error) => {
@@ -82,60 +53,6 @@ export class ApiClient {
         this.axiosInstance.interceptors.response.use(
             (response: AxiosResponse) => response.data,
             async (error: AxiosError) => {
-                const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
-
-                // Public endpoints that don't need token refresh
-                const publicEndpoints = [
-                    '/api/auth/login',
-                    '/api/auth/register',
-                    '/api/auth/verify',
-                    '/api/auth/resend_otp',
-                    '/api/auth/forgot_password',
-                    '/api/auth/verify_reset_otp',
-                    '/api/auth/reset_password',
-                    '/api/auth/google-auth',
-                ];
-                
-                const isPublicEndpoint = publicEndpoints.some(endpoint => 
-                    originalRequest?.url?.includes(endpoint)
-                );
-
-                // Only attempt token refresh for protected endpoints
-                if (
-                    error.response?.status === 401 && 
-                    originalRequest && 
-                    !originalRequest._retry &&
-                    !isPublicEndpoint
-                ) {
-                    originalRequest._retry = true;
-
-                    try {
-                        const refreshToken = await SecureStore.getItemAsync('refresh_token');
-                        
-                        if (refreshToken) {
-                            const response = await axios.post(
-                                `${this.baseUrl}/api/token/refresh`,
-                                { refresh: refreshToken },
-                                { withCredentials: true }
-                            );
-
-                            const newAccessToken = response.data.access;
-                            await SecureStore.setItemAsync('access_token', newAccessToken);
-
-                            if (!originalRequest.headers) {
-                                originalRequest.headers = {};
-                            }
-                            originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-                            return this.axiosInstance(originalRequest);
-                        }
-                    } catch (refreshError) {
-                        await SecureStore.deleteItemAsync('access_token');
-                        await SecureStore.deleteItemAsync('refresh_token');
-                        await SecureStore.deleteItemAsync('user_data');
-                        console.error('Token refresh failed:', refreshError);
-                    }
-                }
-
                 const errorMsg = (error?.response?.data as any)?.error || 'Request failed';
                 return Promise.reject(new Error(errorMsg));
             }

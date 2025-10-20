@@ -6,3 +6,9 @@ export interface Customer {
     role: 'customer' | 'admin';
     isVerified: boolean;
 }
+
+export interface CustomerResponse {
+    message: string;
+    access_token: string;
+    customer: Customer;
+}

@@ -17,6 +17,7 @@ import { Lexend_600SemiBold } from '@expo-google-fonts/lexend/600SemiBold';
 import { Lexend_700Bold } from '@expo-google-fonts/lexend/700Bold';
 import { Lexend_800ExtraBold } from '@expo-google-fonts/lexend/800ExtraBold';
 import { Lexend_900Black } from '@expo-google-fonts/lexend/900Black';
+import useAuthStore from '@/stores/AuthStore';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -35,9 +36,18 @@ export default function RootLayout() {
 		Lexend_900Black,
 	});
 
+	const initializeAuth = useAuthStore((state) => state.initializeAuth);
+
 	useEffect(() => {
 		SystemUI.setBackgroundColorAsync('#FFFFFF');
 	});
+
+	useEffect(() => {
+		const init = async () => {
+			await initializeAuth();
+		}
+		init();
+	}, []);
 
 	useEffect(() => {
 		if (fontsLoaded) SplashScreen.hideAsync();

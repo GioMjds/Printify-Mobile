@@ -225,7 +225,12 @@ export class UserAuthService {
       throw new NotFoundException('User with this email does not exist');
     }
 
+    if (dto.newPassword !== dto.confirmNewPassword) {
+      throw new BadRequestException('Passwords do not match');
+    }
+
     const ok = this.emailService.verifyOtp('reset', emailLower, dto.otp);
+
     if (!ok) {
       throw new BadRequestException('Invalid or expired OTP');
     }

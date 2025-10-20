@@ -41,6 +41,15 @@ class UserAuth {
             email: email,
         });
     }
+
+    async resetPassword(email: string, otp: string, newPassword: string, confirmNewPassword: string) {
+        return await httpClient.post('/auth/reset_password', {
+            email: email,
+            otp: otp,
+            newPassword: newPassword,
+            confirmNewPassword: confirmNewPassword,
+        });
+    }
 }
 
 export const auth = new UserAuth();
