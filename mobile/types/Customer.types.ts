@@ -10,5 +10,6 @@ export interface Customer {
 export interface CustomerResponse {
     message: string;
     access_token: string;
+    refresh_token: string;
     customer: Customer;
 }

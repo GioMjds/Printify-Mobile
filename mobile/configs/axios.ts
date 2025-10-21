@@ -4,6 +4,7 @@ import axios, {
     type AxiosRequestConfig,
     type AxiosResponse,
 } from 'axios';
+import * as SecureStore from 'expo-secure-store';
 
 export interface ApiResponse<T = any> {
     data?: T;
@@ -41,7 +42,17 @@ export class ApiClient {
     private setupInterceptors(): void {
         this.axiosInstance.interceptors.request.use(
             async (config) => {
-                config.withCredentials = true;
+                try {
+                    const token = await SecureStore.getItemAsync('access_token');
+                    if (token) {
+                        config.headers = config.headers ?? {};
+                        if (!config.headers['Authorization']) {
+                            config.headers['Authorization'] = `Bearer ${token}`;
+                        }
+                    }
+                } catch (error) {
+                    console.error('❌ Error retrieving token from SecureStore:', error);
+                }
                 return config;
             },
             (error) => {
@@ -52,8 +63,8 @@ export class ApiClient {
 
         this.axiosInstance.interceptors.response.use(
             (response: AxiosResponse) => response.data,
-            async (error: AxiosError) => {
-                const errorMsg = (error?.response?.data as any)?.error || 'Request failed';
+            async (error) => {
+                const errorMsg = error.response?.data.message;
                 return Promise.reject(new Error(errorMsg));
             }
         );

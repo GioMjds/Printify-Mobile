@@ -4,7 +4,8 @@ import {
   Body,
   Req,
   Res,
-  HttpCode
+  HttpCode,
+  UseGuards
 } from '@nestjs/common';
 import { UserAuthService } from './user_auth.service';
 import { RegisterUser } from './dto/register-user_auth.dto';
@@ -12,6 +13,7 @@ import type { Request, Response } from 'express';
 import { LoginUser } from './dto/login-user_auth.dto';
 import { VerifyOtp } from './dto/verify_otp-user_auth.dto';
 import { ForgotPassword, ResetPassword } from './dto/forgot_password-user_auth.dto';
+import { UserAuthGuard } from './user_auth.guard';
 
 @Controller('auth')
 export class UserAuthController {
@@ -28,24 +30,34 @@ export class UserAuthController {
   async login(@Body() dto: LoginUser, @Res({ passthrough: true }) res: Response) {
     const result = await this.userAuthService.login(dto);
 
-    if (result.access_token) {
-      const secure = process.env.NODE_ENV === 'production';
-      res.cookie('access_token', result.access_token, {
-        httpOnly: true,
-        secure,
-        sameSite: secure ? 'none' : 'lax',
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-        path: '/'
-      });
-    }
+    const accessMaxAge = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+    const refreshMaxAge = 30 * 24 * 60 * 60 * 1000; // 30 days in milliseconds
+
+    res.cookie('access_token', result.access_token, {
+      httpOnly: true,
+      maxAge: accessMaxAge,
+      sameSite: 'lax',
+      path: '/',
+      secure: process.env.NODE_ENV === 'production',
+    });
+
+    res.cookie('refresh_token', result.refresh_token, {
+      httpOnly: true,
+      maxAge: refreshMaxAge,
+      sameSite: 'lax',
+      path: '/',
+      secure: process.env.NODE_ENV === 'production',
+    });
 
     return result;
   }
 
+  @UseGuards(UserAuthGuard)
   @Post('logout')
   @HttpCode(200)
   async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     res.clearCookie('access_token');
+    res.clearCookie('refresh_token');
     return { message: 'Logged out successfully' };
   }
 

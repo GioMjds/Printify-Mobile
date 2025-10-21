@@ -11,12 +11,12 @@ import { Ionicons } from '@expo/vector-icons';
 
 export default function ForgotScreen() {
     const [step, setStep] = useState<'email' | 'reset'>('email');
-    const [email, setEmail] = useState('');
-    const { forgotPassword, resetPassword } = useCustomerAuth();
+    const [email, setEmail] = useState<string>('');
+    const { forgotPasswordAsync, resetPasswordAsync } = useCustomerAuth();
     const isLoading = useAuthStore((state) => state.isLoading);
-    const [showNew, setShowNew] = useState(false);
-    const [showConfirm, setShowConfirm] = useState(false);
-    
+    const [showNew, setShowNew] = useState<boolean>(false);
+    const [showConfirm, setShowConfirm] = useState<boolean>(false);
+
     const emailForm = useForm<{ email: string }>({
         defaultValues: { email: '' }
     });
@@ -32,19 +32,19 @@ export default function ForgotScreen() {
 
     const newPassword = resetForm.watch('newPassword');
 
-    const onSendOTP = (data: { email: string }) => {
+    const onSendOTP = async (data: { email: string }) => {
         setEmail(data.email);
-        forgotPassword(data.email);
+        await forgotPasswordAsync(data.email);
         setStep('reset');
     };
 
-    const onResetPassword = (data: ResetPasswordRequest) => {
-        resetPassword({ ...data, email });
+    const onResetPassword = async (data: ResetPasswordRequest) => {
+        await resetPasswordAsync({ ...data, email });
     };
 
     if (step === 'email') {
         return (
-            <SafeAreaView className="flex-1 bg-white">
+            <SafeAreaView className="flex-1 bg-background">
                 <KeyboardAvoidingView
                     behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                     className="flex-1"

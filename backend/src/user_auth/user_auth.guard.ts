@@ -7,6 +7,7 @@ import {
 import { PrismaService } from '../utils/prisma.service';
 import * as jwt from 'jsonwebtoken';
 import { Request } from 'express';
+import { JwtService } from '@nestjs/jwt';
 
 type JwtPayload = {
   sub: string;
@@ -18,7 +19,10 @@ type JwtPayload = {
 
 @Injectable()
 export class UserAuthGuard implements CanActivate {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly jwtService: JwtService,
+  ) {}
 
   async canActivate(
     context: ExecutionContext,
@@ -26,21 +30,30 @@ export class UserAuthGuard implements CanActivate {
     const req = context.switchToHttp().getRequest<Request>();
     const authHeader = req.headers['authorization'];
 
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new UnauthorizedException('Missing or invalid authorization header');
+    let token: string | undefined;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.slice(7).trim();
     }
 
-    const token = authHeader.slice(7).trim();
-    const secret = process.env.JWT_SECRET;
+    if (!token && typeof req.headers['cookie'] === 'string') {
+      const cookieHeader = req.headers['cookie'] as string;
+      const cookies = cookieHeader.split(';').map(c => c.trim());
+      for (const c of cookies) {
+        if (c.startsWith('access_token=')) {
+          token = decodeURIComponent(c.split('=')[1] || '');
+          break;
+        }
+      }
+    }
 
-    if (!secret) {
-      throw new UnauthorizedException('JWT secret not configured');
+    if (!token) {
+      throw new UnauthorizedException('Missing or invalid authorization token');
     }
 
     let payload: JwtPayload;
-
     try {
-      payload = jwt.verify(token, secret) as JwtPayload;
+      payload = this.jwtService.verify(token) as JwtPayload;
     } catch (error) {
       throw new UnauthorizedException('Invalid or expired token');
     }
@@ -59,7 +72,7 @@ export class UserAuthGuard implements CanActivate {
 
     (req as any).user = user;
     (req as any).tokenPayload = payload;
-    
+
     return true;
   }
 }

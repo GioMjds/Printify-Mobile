@@ -2,14 +2,17 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { auth } from "@/routes/UserAuth.routes";
 import * as SecureStore from 'expo-secure-store';
 import useAuthStore from "@/stores/AuthStore";
+import { router } from 'expo-router';
 import { LoginRequest, RegisterRequest, ResetPasswordRequest, VerifyOtpRequest } from "@/types/UserAuth.types";
 import { CustomerResponse } from "@/types/Customer.types";
 
 const ACCESS_TOKEN_KEY = 'access_token';
+const REFRESH_TOKEN_KEY = 'refresh_token';
 const CUSTOMER_ID = 'customer_id';
 
-const storeTokens = async (accessToken: string, customerId: string) => {
+const storeTokens = async (accessToken: string, refreshToken: string, customerId: string) => {
     await SecureStore.setItemAsync(ACCESS_TOKEN_KEY, accessToken);
+    await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, refreshToken);
     await SecureStore.setItemAsync(CUSTOMER_ID, customerId);
 }
 
@@ -28,13 +31,13 @@ export function useCustomerAuth() {
         onMutate: () => setIsLoading(true),
         onSuccess: async (data: CustomerResponse) => {
             if (data.customer && data.access_token) {
-                await storeTokens(data.access_token, data.customer.id);
+                await storeTokens(data.access_token, data.refresh_token, data.customer.id);
                 setCustomer(data.customer);
                 setIsAuthenticated(true);
                 queryClient.invalidateQueries({ queryKey: ['customer'] });
             }
         },
-        onError: (error) => console.error('Login error:', error),
+        onError: (error) => console.error(error),
         onSettled: () => setIsLoading(false),
     });
 
@@ -57,6 +60,11 @@ export function useCustomerAuth() {
         onSuccess: async (data, variables) => {
             queryClient.setQueryData(['registerOtp', variables.email], data);
             await SecureStore.setItemAsync('pending_register_email', variables.email);
+            try {
+                router.push({ pathname: '/(auth)/verify', params: { email: variables.email } } as any);
+            } catch (e) {
+                console.error('Navigation to verify screen failed:', e);
+            }
         },
         onError: (err) => console.error('Register (send OTP) error:', err),
         onSettled: () => setIsLoading(false),
@@ -114,5 +122,14 @@ export function useCustomerAuth() {
         resendRegisterOtp: resendRegisterOtpMutation.mutate,
         forgotPassword: forgotPasswordMutation.mutate,
         resetPassword: resetPasswordMutation.mutate,
+
+        // Async variants for use in non-component contexts
+        loginAsync: loginMutation.mutateAsync,
+        logoutAsync: logoutMutation.mutateAsync,
+        sendRegisterOtpAsync: registerMutation.mutateAsync,
+        verifyRegisterOtpAsync: verifyRegisterOtpMutation.mutateAsync,
+        resendRegisterOtpAsync: resendRegisterOtpMutation.mutateAsync,
+        forgotPasswordAsync: forgotPasswordMutation.mutateAsync,
+        resetPasswordAsync: resetPasswordMutation.mutateAsync,
     }
 }

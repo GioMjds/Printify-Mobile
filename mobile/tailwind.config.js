@@ -8,7 +8,9 @@ module.exports = {
 				'primary': '#0e2148',
 				'secondary': '#483aa0',
 				'accent': '#7965c1',
-				'highlight': '#e3d095'
+				'highlight': '#e3d095',
+
+				'background': '#F9F5F0',
 			},
 			fontFamily: {
                 'lexend-thin': ['Lexend_100Thin'],

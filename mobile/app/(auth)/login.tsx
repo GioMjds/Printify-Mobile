@@ -10,13 +10,13 @@ import useAuthStore from "@/stores/AuthStore";
 import { LoginRequest } from "@/types/UserAuth.types";
 
 export default function LoginScreen() {
-    const { login } = useCustomerAuth();
+    const [showPassword, setShowPassword] = useState<boolean>(false);
+
+    const { loginAsync } = useCustomerAuth();
 
     const isLoading = useAuthStore((state) => state.isLoading);
 
-    const [showPassword, setShowPassword] = useState(false);
-
-    const { control, handleSubmit, formState: { errors } } = useForm<LoginRequest>({
+    const { control, handleSubmit, setError, formState: { errors } } = useForm<LoginRequest>({
         mode: 'onSubmit',
         defaultValues: {
             email: '',
@@ -24,10 +24,21 @@ export default function LoginScreen() {
         }
     });
 
-    const onSubmit = (data: LoginRequest) => login(data);
+    const onSubmit = async (data: LoginRequest) => {
+        try {
+            await loginAsync(data);
+        } catch (error: any) {
+            const msg = error?.message;
+            if (msg.toLowerCase().includes('password')) {
+                setError('password', { type: 'server', message: msg });
+            } else {
+                setError('email', { type: 'server', message: msg });
+            }
+        }
+    }
 
     return (
-        <SafeAreaView className="flex-1 bg-white">
+        <SafeAreaView className="flex-1 bg-background">
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 className="flex-1"
@@ -46,10 +57,10 @@ export default function LoginScreen() {
                             />
 
                             <StyledText variant="lexend-bold" className="text-5xl text-primary mb-2">
-                                Welcome Back
+                                Welcome to Printify!
                             </StyledText>
-                            <StyledText variant="lexend" className="text-lg text-gray-600">
-                                Sign in to continue to Printify
+                            <StyledText variant="lexend" className="text-xl text-gray-600">
+                                Log in using your Printify account
                             </StyledText>
                         </View>
 
@@ -57,7 +68,7 @@ export default function LoginScreen() {
                         <View className="mb-6 px-1">
                             {/* Email Input */}
                             <View className="mb-4">
-                                <StyledText variant="lexend-medium" className="text-base text-primary mb-2">
+                                <StyledText variant="lexend-medium" className="text-xl text-primary mb-2">
                                     Email Address
                                 </StyledText>
                                 <Controller
@@ -85,7 +96,7 @@ export default function LoginScreen() {
                                     )}
                                 />
                                 {errors.email && (
-                                    <StyledText variant="lexend" className="text-xs text-red-500 mt-1">
+                                    <StyledText variant="lexend" className="text-lg text-red-500 mt-1">
                                         {errors.email.message}
                                     </StyledText>
                                 )}
@@ -93,7 +104,7 @@ export default function LoginScreen() {
 
                             {/* Password Input */}
                             <View className="mb-4">
-                                <StyledText variant="lexend-medium" className="text-base text-primary mb-2">
+                                <StyledText variant="lexend-medium" className="text-xl text-primary mb-2">
                                     Password
                                 </StyledText>
                                 <Controller
@@ -123,13 +134,13 @@ export default function LoginScreen() {
                                                 onPress={() => setShowPassword(!showPassword)}
                                                 className="absolute right-3 top-3"
                                             >
-                                                <Ionicons name={showPassword ? 'eye' : 'eye-off'} size={24} color="#6B7280" />
+                                                <Ionicons name={showPassword ? 'eye' : 'eye-off'} size={30} color="#6B7280" />
                                             </TouchableOpacity>
                                         </View>
                                     )}
                                 />
                                 {errors.password && (
-                                    <StyledText variant="lexend" className="text-xs text-red-500 mt-1">
+                                    <StyledText variant="lexend" className="text-lg text-red-500 mt-1">
                                         {errors.password.message}
                                     </StyledText>
                                 )}
@@ -139,9 +150,9 @@ export default function LoginScreen() {
                             <TouchableOpacity
                                 onPress={() => router.push('/(auth)/forgot')}
                                 disabled={isLoading}
-                                className="self-end"
+                                className="self-start"
                             >
-                                <StyledText variant="lexend-medium" className="text-sm text-secondary">
+                                <StyledText variant="lexend-medium" className="text-lg text-secondary">
                                     Forgot Password?
                                 </StyledText>
                             </TouchableOpacity>
@@ -156,7 +167,7 @@ export default function LoginScreen() {
                             {isLoading ? (
                                 <ActivityIndicator color="#FFFFFF" />
                             ) : (
-                                <StyledText variant="lexend-semibold" className="text-white text-base">
+                                <StyledText variant="lexend-semibold" className="text-white text-2xl">
                                     Sign In
                                 </StyledText>
                             )}
@@ -164,14 +175,14 @@ export default function LoginScreen() {
 
                         {/* Register Link */}
                         <View className="flex-row justify-center items-center">
-                            <StyledText variant="lexend" className="text-gray-600 text-sm">
+                            <StyledText variant="lexend" className="text-gray-600 text-xl">
                                 Don&apos;t have an account?{' '}
                             </StyledText>
                             <TouchableOpacity
                                 onPress={() => router.push('/(auth)/register')}
                                 disabled={isLoading}
                             >
-                                <StyledText variant="lexend-semibold" className="text-secondary text-sm">
+                                <StyledText variant="lexend-semibold" className="text-secondary text-xl">
                                     Sign Up
                                 </StyledText>
                             </TouchableOpacity>

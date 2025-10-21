@@ -14,24 +14,19 @@ import {
 } from './dto/forgot_password-user_auth.dto';
 import { compare, hash } from 'bcrypt';
 import * as jwt from 'jsonwebtoken';
-import nodemailer from 'nodemailer';
-import { randomInt, randomUUID } from 'crypto';
+import { randomUUID } from 'crypto';
 import { EmailService } from '../utils/email.service';
-
-type Otp = {
-  code: string;
-  expiresAt: Date;
-  type: 'register' | 'reset';
-  firstName?: string;
-  lastName?: string;
-  hashedPassword?: string;
-};
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class UserAuthService {
+  // Default Cloudinary profile image URL for new users
+  private readonly DEFAULT_PROFILE_IMAGE = `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/image/upload/v1/default_profile_images/default_pfp.jpg`;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly emailService: EmailService,
+    private readonly jwtService: JwtService,
   ) {}
 
   async register(dto: RegisterUser) {
@@ -135,7 +130,7 @@ export class UserAuthService {
 
       await this.prisma.user.update({
         where: { email: lower },
-        data: { isVerified: true },
+        data: { isVerified: false },
       });
       return { message: 'Registration successful', userId: userExisting.id };
     }
@@ -155,7 +150,8 @@ export class UserAuthService {
         email: lower,
         password: hashedPassword,
         name: `${firstName}${lastName ? ' ' + lastName : ''}`,
-        isVerified: true,
+        isVerified: false,
+        profile_image: this.DEFAULT_PROFILE_IMAGE,
       },
     });
 
@@ -172,20 +168,26 @@ export class UserAuthService {
     if (!customer) throw new UnauthorizedException('Invalid credentials');
 
     const matched = await compare(dto.password, customer.password);
-    if (!matched) throw new UnauthorizedException('Invalid credentials');
+    if (!matched) throw new BadRequestException('Incorrect password. Please try again.');
 
-    if (!process.env.JWT_SECRET)
-      throw new BadRequestException('JWT secret not configured');
+    const payload = {
+      sub: customer.id,
+      email: customer.email,
+      role: customer.role,
+    }
 
-    const token = jwt.sign(
-      { sub: customer.id, email: customer.email, role: customer.role },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' },
-    );
+    const access_token = await this.jwtService.signAsync(payload, {
+      expiresIn: '7d',
+    });
+
+    const refresh_token = await this.jwtService.signAsync(payload, {
+      expiresIn: '30d',
+    });
 
     return {
       message: 'Login successful',
-      access_token: token,
+      access_token: access_token,
+      refresh_token: refresh_token,
       customer: {
         id: customer.id,
         email: customer.email,
