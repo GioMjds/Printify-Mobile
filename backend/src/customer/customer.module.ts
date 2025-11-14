@@ -1,13 +1,24 @@
 import { Module } from '@nestjs/common';
-import { CustomerService } from './customer.service';
-import { CustomerController } from './customer.controller';
 import { PrismaModule } from '../utils/prisma.module';
 import { CustomerGuard } from './customer.guard';
+import { UploadController } from './upload/upload.controller';
+import { UploadService } from './upload/upload.service';
+import { ProfileController } from './profile/profile.controller';
+import { ProfileService } from './profile/profile.service';
+import { NotificationsGateway } from './notifications/notifications.gateway';
+import { NotificationsService } from './notifications/notifications.service';
+import { NotificationsController } from './notifications/notifications.controller';
 
 @Module({
   imports: [PrismaModule],
-  controllers: [CustomerController],
-  providers: [CustomerService, CustomerGuard],
-  exports: [CustomerService],
+  controllers: [UploadController, ProfileController, NotificationsController],
+  providers: [
+    // CustomerGuard,
+    UploadService,
+    ProfileService,
+    NotificationsGateway,
+    NotificationsService,
+  ],
+  exports: [],
 })
 export class CustomerModule {}

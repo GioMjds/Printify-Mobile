@@ -25,13 +25,27 @@ export class CustomerGuard implements CanActivate {
     context: ExecutionContext,
   ): Promise<boolean> {
     const req = context.switchToHttp().getRequest<Request>();
-    const authHeader = req.headers['authorization'];
-
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new UnauthorizedException('Missing or invalid authorization header');
+    
+    // Try to get token from cookies first, then fall back to Authorization header
+    let token: string | undefined;
+    
+    // Check cookies
+    if (req.cookies?.access_token) {
+      token = req.cookies.access_token;
+    }
+    
+    // Check Authorization header if no cookie found
+    if (!token) {
+      const authHeader = req.headers['authorization'];
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.slice(7).trim();
+      }
     }
 
-    const token = authHeader.slice(7).trim();
+    if (!token) {
+      throw new UnauthorizedException('Missing or invalid authorization token');
+    }
+
     const secret = process.env.JWT_SECRET;
 
     if (!secret) {

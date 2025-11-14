@@ -1,39 +1,29 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { auth } from "@/routes/UserAuth.routes";
+import { auth } from "@/gateway/UserAuth";
 import * as SecureStore from 'expo-secure-store';
 import useAuthStore from "@/stores/AuthStore";
 import { router } from 'expo-router';
 import { LoginRequest, RegisterRequest, ResetPasswordRequest, VerifyOtpRequest } from "@/types/UserAuth.types";
 import { CustomerResponse } from "@/types/Customer.types";
 
-const ACCESS_TOKEN_KEY = 'access_token';
-const REFRESH_TOKEN_KEY = 'refresh_token';
-const CUSTOMER_ID = 'customer_id';
-
-const storeTokens = async (accessToken: string, refreshToken: string, customerId: string) => {
-    await SecureStore.setItemAsync(ACCESS_TOKEN_KEY, accessToken);
-    await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, refreshToken);
-    await SecureStore.setItemAsync(CUSTOMER_ID, customerId);
-}
-
 const deleteStoredTokens = async () => {
-    await SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY);
+    await SecureStore.deleteItemAsync('access_token');
+    await SecureStore.deleteItemAsync('refresh_token');
+    await SecureStore.deleteItemAsync('customer_id');
 }
 
 export function useCustomerAuth() {
     const queryClient = useQueryClient();
-    const setCustomer = useAuthStore((state) => state.setCustomer);
-    const setIsAuthenticated = useAuthStore((state) => state.setIsAuthenticated);
+    const setTokens = useAuthStore((state) => state.setTokens);
+    const clearAuth = useAuthStore((state) => state.clearAuth);
     const setIsLoading = useAuthStore((state) => state.setIsLoading);
 
     const loginMutation = useMutation({
         mutationFn: async ({ email, password }: LoginRequest) => await auth.login({ email, password }),
         onMutate: () => setIsLoading(true),
         onSuccess: async (data: CustomerResponse) => {
-            if (data.customer && data.access_token) {
-                await storeTokens(data.access_token, data.refresh_token, data.customer.id);
-                setCustomer(data.customer);
-                setIsAuthenticated(true);
+            if (data.customer && data.access_token && data.refresh_token) {
+                await setTokens(data.access_token, data.refresh_token, data.customer);
                 queryClient.invalidateQueries({ queryKey: ['customer'] });
             }
         },
@@ -45,9 +35,7 @@ export function useCustomerAuth() {
         mutationFn: async () => await auth.logout(),
         onMutate: () => setIsLoading(true),
         onSuccess: async () => {
-            await deleteStoredTokens();
-            setCustomer(null);
-            setIsAuthenticated(false);
+            await clearAuth();
             queryClient.clear();
         },
         onError: () => console.error('Logout error'),

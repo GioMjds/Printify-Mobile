@@ -1,49 +1,51 @@
 import { httpClient } from "@/configs/axios";
 import { LoginRequest, RegisterRequest } from "@/types/UserAuth.types";
 
-class UserAuth {
+const http = httpClient.endpoint('/auth');
+
+export const auth = {
     async logout() {
-        return await httpClient.post('/auth/logout');
-    }
+        return await http.post('/logout');
+    },
 
     async login({ email, password }: LoginRequest) {
-        return await httpClient.post('/auth/login', {
+        return await http.post('/login', {
             email: email,
             password: password,
         });
-    }
+    },
 
     async sendRegisterOtp({ firstName, lastName, email, password, confirmPassword }: RegisterRequest) {
-        return await httpClient.post('/auth/register', {
+        return await http.post('/register', {
             firstName: firstName,
             lastName: lastName,
             email: email,
             password: password,
             confirmPassword: confirmPassword
         });
-    }
+    },
 
     async verifyRegisterOtp(email: string, otp: string) {
-        return await httpClient.post('/auth/verify_otp', {
+        return await http.post('/verify_otp', {
             email: email,
             otp: otp,
         });
-    }
+    },
 
     async resendRegisterOtp(email: string) {
-        return await httpClient.post('/auth/resend_otp', {
+        return await http.post('/resend_otp', {
             email: email,
         });
-    }
+    },
 
     async forgotPassword(email: string) {
-        return await httpClient.post('/auth/forgot_password', {
+        return await http.post('/forgot_password', {
             email: email,
         });
-    }
+    },
 
     async resetPassword(email: string, otp: string, newPassword: string, confirmNewPassword: string) {
-        return await httpClient.post('/auth/reset_password', {
+        return await http.post('/reset_password', {
             email: email,
             otp: otp,
             newPassword: newPassword,
@@ -51,5 +53,3 @@ class UserAuth {
         });
     }
 }
-
-export const auth = new UserAuth();

@@ -1,10 +1,10 @@
 import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
 import { Customer } from '@/types/Customer.types';
-import { customer } from '@/routes/Customer.routes';
 
 const ACCESS_TOKEN_KEY = 'access_token';
 const REFRESH_TOKEN_KEY = 'refresh_token';
+const CUSTOMER_ID_KEY = 'customer_id';
 
 interface State {
     customer: Customer | null;
@@ -18,6 +18,7 @@ interface Actions {
     setIsAuthenticated: (isAuthenticated: boolean) => void;
     setIsLoading: (isLoading: boolean) => void;
     setIsInitialized: (isInitialized: boolean) => void;
+    setTokens: (accessToken: string, refreshToken: string, customer: Customer) => Promise<void>;
     fetchCustomer: (customerId: string) => Promise<void>;
     initializeAuth: () => Promise<void>;
     clearAuth: () => Promise<void>;
@@ -26,6 +27,7 @@ interface Actions {
 const clearStoredData = async () => {
     await SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY);
     await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
+    await SecureStore.deleteItemAsync(CUSTOMER_ID_KEY);
 }
 
 const useAuthStore = create<State & Actions>((set, get) => ({
@@ -44,6 +46,25 @@ const useAuthStore = create<State & Actions>((set, get) => ({
 
     setIsInitialized: (isInitialized) => set({ isInitialized }),
 
+    setTokens: async (accessToken: string, refreshToken: string, customer: Customer) => {
+        try {
+            // Store tokens securely
+            await SecureStore.setItemAsync(ACCESS_TOKEN_KEY, accessToken);
+            await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, refreshToken);
+            await SecureStore.setItemAsync(CUSTOMER_ID_KEY, customer.id);
+
+            // Update state
+            set({ 
+                customer,
+                isAuthenticated: true,
+                isLoading: false 
+            });
+        } catch (error) {
+            console.error('Error storing tokens:', error);
+            throw error;
+        }
+    },
+
     fetchCustomer: async (customerId: string) => {
         set({ isLoading: true });
         try {
@@ -58,17 +79,9 @@ const useAuthStore = create<State & Actions>((set, get) => ({
                 return;
             }
 
-            const response = await customer.getCustomerProfile(customerId);
-            
-            if (response && response.id) {
-                set({ 
-                    customer: response.data, 
-                    isAuthenticated: true,
-                    isLoading: false 
-                });
-            } else {
-                throw new Error('Invalid customer response');
-            }
+            // You can implement a profile fetch endpoint here if needed
+            // For now, we'll rely on the customer data from login/register
+            set({ isLoading: false });
         } catch (error) {
             console.error('Error fetching customer profile:', error);
             await clearStoredData();
@@ -95,10 +108,16 @@ const useAuthStore = create<State & Actions>((set, get) => ({
                 return;
             }
 
-            const customerId = await SecureStore.getItemAsync('customer_id');
+            const customerId = await SecureStore.getItemAsync(CUSTOMER_ID_KEY);
             
             if (customerId) {
-                await get().fetchCustomer(customerId);
+                // Token exists and customer ID exists
+                // You can fetch fresh customer data here if you have a profile endpoint
+                set({ 
+                    isAuthenticated: true,
+                    isLoading: false,
+                    isInitialized: true
+                });
             } else {
                 await clearStoredData();
                 set({ 
@@ -118,14 +137,10 @@ const useAuthStore = create<State & Actions>((set, get) => ({
                 isInitialized: true
             });
         }
-
-        set({ isInitialized: true });
     },
 
-    // Clear auth and logout
     clearAuth: async () => {
         await clearStoredData();
-        await SecureStore.deleteItemAsync('customer_id');
         set({ 
             customer: null, 
             isAuthenticated: false, 

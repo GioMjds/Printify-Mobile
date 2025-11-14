@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useForm } from 'react-hook-form';
-import React, { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
 import StyledText from '@/components/ui/StyledText';
 import { useCustomerAuth } from '@/hooks/useCustomerAuth';

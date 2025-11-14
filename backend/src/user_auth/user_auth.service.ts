@@ -13,14 +13,12 @@ import {
   ResetPassword,
 } from './dto/forgot_password-user_auth.dto';
 import { compare, hash } from 'bcrypt';
-import * as jwt from 'jsonwebtoken';
 import { randomUUID } from 'crypto';
 import { EmailService } from '../utils/email.service';
 import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class UserAuthService {
-  // Default Cloudinary profile image URL for new users
   private readonly DEFAULT_PROFILE_IMAGE = `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/image/upload/v1/default_profile_images/default_pfp.jpg`;
 
   constructor(
